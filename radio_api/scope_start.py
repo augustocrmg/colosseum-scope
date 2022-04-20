@@ -31,10 +31,13 @@ from support_functions import run_tmux_command
 # | Node 3 |   8 |      1 |      2 |
 # | Node 4 |   9 |      1 |      2 |
 # +--------+-----+--------+--------+
+
+
 def get_active_nodes_colosseumcli() -> dict:
     logging.info('Getting list of active nodes using colosseumcli')
 
-    pipe = subprocess.Popen('colosseumcli rf radiomap', shell=True, stdout=subprocess.PIPE).stdout
+    pipe = subprocess.Popen('colosseumcli rf radiomap',
+                            shell=True, stdout=subprocess.PIPE).stdout
 
     # separate lines returned by the above command
     lines = pipe.read().decode("utf-8").splitlines()
@@ -93,7 +96,8 @@ def get_active_nodes_colosseumcli() -> dict:
                 # with more nodes than what we have in the current reservation.
                 # NOTE: None is returned as a string by Colosseum
                 if splitted_line[srn_idx][0] != 'None':
-                    active_nodes[int(splitted_line[node_idx][1])] = int(splitted_line[srn_idx][0])
+                    active_nodes[int(splitted_line[node_idx][1])] = int(
+                        splitted_line[srn_idx][0])
 
     return active_nodes
 
@@ -111,7 +115,8 @@ def get_active_nodes_nmap() -> dict:
     try:
         col0_ip = get_iface_ip(iface)
     except ValueError:
-        logging.error('Interface ' + iface + ' is not active. Exiting execution')
+        logging.error('Interface ' + iface +
+                      ' is not active. Exiting execution')
         exit(1)
 
     logging.info(iface + ' IP address: ' + col0_ip)
@@ -150,7 +155,8 @@ def get_active_nodes_nmap() -> dict:
             logging.error('No active hosts found by nmap. Exiting')
             exit(1)
 
-        pipe = subprocess.Popen(nmap_command, shell=True, stdout=subprocess.PIPE).stdout
+        pipe = subprocess.Popen(nmap_command, shell=True,
+                                stdout=subprocess.PIPE).stdout
 
         # separate lines returned by the above command
         lines = pipe.read().decode("utf-8").splitlines()
@@ -300,14 +306,15 @@ def get_config_params(config: dict) -> dict:
     parameter_found = False
     for param_key, param_value in param_dict.items():
         try:
-            if param_key in ['slice-scheduling-policy', 'slice-allocation', 'slice-users', \
-            'bs-config', 'ue-config']:
+            if param_key in ['slice-scheduling-policy', 'slice-allocation', 'slice-users',
+                             'bs-config', 'ue-config']:
                 # convert in python structure
                 try:
                     passed_value = ast.literal_eval(config[param_key])
                 except ValueError:
                     logging.info('')
-                    logging.info('Did you remember to pass a configuration file? :-)\n')
+                    logging.info(
+                        'Did you remember to pass a configuration file? :-)\n')
                     raise
 
                 if param_key == 'slice-scheduling-policy':
@@ -338,7 +345,8 @@ def get_config_params(config: dict) -> dict:
             print_param = add_tabs(param_value, longest_word)
             logging.info(param_key + ' ' + str(config_params[param_value]))
         else:
-            logging.warning('Parameter ' + param_key + ' not found. Using default value')
+            logging.warning('Parameter ' + param_key +
+                            ' not found. Using default value')
 
     return config_params
 
@@ -365,7 +373,7 @@ def parse_config_file(filename: str) -> dict:
     for key in config:
         if config[key].lower() in ['true', 'false']:
             config[key] = bool(distutils.util.strtobool(config[key]))
-        elif key in ['users-bs',]:
+        elif key in ['users-bs', ]:
             config[key] = int(config[key])
 
     return config
@@ -393,7 +401,8 @@ def capture_pcap(iface: str, node_type: str) -> None:
             time.sleep(5)
 
     if len(iface_ip) == 0:
-        logging.warning('Interface ' + iface + ' not found. Not capturing packets')
+        logging.warning('Interface ' + iface +
+                        ' not found. Not capturing packets')
         return
 
     # start tcpdump in the current tmux session and dump on file after receiving
@@ -418,9 +427,9 @@ def is_node_bs(bs_ue_num: int, use_colosseumcli: bool) -> tuple:
     # check that we have enough nodes in the reservation for the set
     # number of UEs per base stations. (-1: one node is the BS)
     if len(active_nodes.keys()) - 1 < bs_ue_num:
-        logging.warning('Not enough active nodes in the reservation to accomodate ' +\
-            str(bs_ue_num) + ' users per base station. Setting users per base station to: ' +\
-            str(len(active_nodes.keys()) - 1))
+        logging.warning('Not enough active nodes in the reservation to accomodate ' +
+                        str(bs_ue_num) + ' users per base station. Setting users per base station to: ' +
+                        str(len(active_nodes.keys()) - 1))
         bs_ue_num = len(active_nodes.keys()) - 1
 
     my_ip, my_node_id, nodes_ip = get_nodes_ip(active_nodes)
@@ -462,7 +471,8 @@ def start_iperf_server(client_ip) -> None:
         # derive port offset from client srsLTE IP
         port_offset = int(c_ip.split('.')[-1])
         port = default_port + port_offset
-        logging.info('Starting iperf3 server in background on port ' + str(port))
+        logging.info(
+            'Starting iperf3 server in background on port ' + str(port))
 
         iperf_cmd = 'iperf3 -s -p ' + str(port) + ' -D'
         os.system(iperf_cmd)
@@ -470,7 +480,7 @@ def start_iperf_server(client_ip) -> None:
 
 # write scope configuration, srsLTE parameters and start cellular applicaitons
 def run_scope(bs_ue_num: int, iperf: bool, use_colosseumcli: bool,
-    capture_pkts: bool, config_params: dict, write_config_parameters: bool):
+              capture_pkts: bool, config_params: dict, write_config_parameters: bool):
 
     # define name of the tmux session in which commands are run
     tmux_session_name = 'scope'
@@ -484,7 +494,8 @@ def run_scope(bs_ue_num: int, iperf: bool, use_colosseumcli: bool,
     os.system('tmux kill-session -t ' + tmux_session_name)
     os.system('tmux kill-session -t tcpdump')
 
-    is_bs, my_ip, my_node_id, nodes_ip, bs_ue_num = is_node_bs(bs_ue_num, use_colosseumcli)
+    is_bs, my_ip, my_node_id, nodes_ip, bs_ue_num = is_node_bs(
+        bs_ue_num, use_colosseumcli)
 
     # default srsLTE base station IP from the BS perspective
     srslte_bs_ip = '172.16.0.1'
@@ -499,7 +510,8 @@ def run_scope(bs_ue_num: int, iperf: bool, use_colosseumcli: bool,
         os.system('rm ' + enb_log_file)
 
         # write srsenb configuration
-        write_srslte_config(srslte_config_dir, config_params['bs_config'], True)
+        write_srslte_config(srslte_config_dir,
+                            config_params['bs_config'], True)
 
         # write configuration parameters on file
         if write_config_parameters:
@@ -517,7 +529,8 @@ def run_scope(bs_ue_num: int, iperf: bool, use_colosseumcli: bool,
         logging.info('My users IPs ' + str(my_users_ip))
 
         # get mapping of srsLTE UE addresses and IPs
-        srs_col_ip_mapping, srs_imsi_id_mapping = get_srsue_ip_mapping(my_node_id, my_users_ip, srslte_config_dir)
+        srs_col_ip_mapping, srs_imsi_id_mapping = get_srsue_ip_mapping(
+            my_node_id, my_users_ip, srslte_config_dir)
         logging.info('tr0/srs IP mapping ' + str(srs_col_ip_mapping))
         logging.info('ue/imsi mapping ' + str(srs_imsi_id_mapping))
 
@@ -562,15 +575,18 @@ def run_scope(bs_ue_num: int, iperf: bool, use_colosseumcli: bool,
         bs_id = get_serving_bs_id(my_node_id, bs_ue_num)
 
         # get mapping of srsLTE UE addresses and IPs
-        srs_col_ip_mapping, _ = get_srsue_ip_mapping(bs_id, nodes_ip, srslte_config_dir)
+        srs_col_ip_mapping, _ = get_srsue_ip_mapping(
+            bs_id, nodes_ip, srslte_config_dir)
 
         # compute my srsLTE IP and extract it from the returned dictionary
-        my_srslte_ip, _ = get_srsue_ip_mapping(bs_id, {my_node_id: my_ip}, srslte_config_dir)
+        my_srslte_ip, _ = get_srsue_ip_mapping(
+            bs_id, {my_node_id: my_ip}, srslte_config_dir)
         my_srslte_ip = my_srslte_ip[my_ip]
         logging.info('My srsLTE IP: ' + my_srslte_ip)
 
         bs_tr0 = nodes_ip[bs_id]
-        logging.info('Serving BS ID: ' + str(bs_id) + ' serving BS tr0: ' + bs_tr0 + ' serving BS IP: ' + srslte_bs_ip)
+        logging.info('Serving BS ID: ' + str(bs_id) + ' serving BS tr0: ' +
+                     bs_tr0 + ' serving BS IP: ' + srslte_bs_ip)
 
         # if bs_id is 1, it will be missing from srs_col_ip_mapping, insert tr0 entry associated with srsLTE BS IP,
         # else replace IP currently assigned to bs_tr0 key
@@ -581,7 +597,8 @@ def run_scope(bs_ue_num: int, iperf: bool, use_colosseumcli: bool,
         setup_srsue_config(my_node_id, srslte_config_dir)
 
         # write srsue configuration
-        write_srslte_config(srslte_config_dir, config_params['ue_config'], False)
+        write_srslte_config(srslte_config_dir,
+                            config_params['ue_config'], False)
 
         # start srsLTE UE in tmux session
         start_srslte(tmux_session_name, srslte_config_dir, 'ue', ue_log_file)
@@ -596,7 +613,8 @@ def run_scope(bs_ue_num: int, iperf: bool, use_colosseumcli: bool,
 
         if iperf:
             sleep_time = 10
-            logging.info('iPerf option detected, sleeping ' + str(sleep_time) + 's')
+            logging.info('iPerf option detected, sleeping ' +
+                         str(sleep_time) + 's')
             time.sleep(sleep_time)
 
             start_iperf_client(tmux_session_name, srslte_bs_ip, my_srslte_ip)
@@ -616,45 +634,58 @@ if __name__ == '__main__':
      and tun_srsue interfaces and dump them on .pcap files through tcpdump', action='store_true')
     parser.add_argument('--config-file', type=str, default='', help='json-formatted configuration file file to parse.\
         The other arguments are ignored if config file is passed')
-    parser.add_argument('--iperf', help='Generate traffic through iperf3, downlink only', action='store_true')
-    parser.add_argument('--users-bs', type=int, default=3, help='Maximum number of users per base station')
+    parser.add_argument(
+        '--iperf', help='Generate traffic through iperf3, downlink only', action='store_true')
+    parser.add_argument('--users-bs', type=int, default=3,
+                        help='Maximum number of users per base station')
     parser.add_argument('--colcli', help='Use colosseumcli APIs to get list of active nodes.\
         This parameter is specific to Colosseum and it is only available in interactive mode', action='store_true')
-    parser.add_argument('--write-config-parameters', help='If enabled, writes configuration parameters on file. Done at the base station-side',\
-        action='store_true')
+    parser.add_argument('--write-config-parameters', help='If enabled, writes configuration parameters on file. Done at the base station-side',
+                        action='store_true')
 
     # configuration parameters
     # scheduling: 0 for round-robin, 1 for waterfilling, 2 for proportional
-    parser.add_argument('--custom-ue-slice', help='Use UE-slice associations passed in the configuration file', action='store_true')
+    parser.add_argument(
+        '--custom-ue-slice', help='Use UE-slice associations passed in the configuration file', action='store_true')
 
     # the following three can be embedded into bs-config/ue-config. Leave for legacy config files
-    parser.add_argument('--dl-freq', type=int, default=dl_freq_default, help='Downlink frequency [Hz].')
-    parser.add_argument('--ul-freq', type=int, default=ul_freq_default, help='Uplink frequency [Hz].')
-    parser.add_argument('--dl-prb', type=int, default=n_prb_default, choices=prb_values, help='Downlink PRBs.')
+    parser.add_argument('--dl-freq', type=int,
+                        default=dl_freq_default, help='Downlink frequency [Hz].')
+    parser.add_argument('--ul-freq', type=int,
+                        default=ul_freq_default, help='Uplink frequency [Hz].')
+    parser.add_argument('--dl-prb', type=int, default=n_prb_default,
+                        choices=prb_values, help='Downlink PRBs.')
 
     parser.add_argument('--bs-config', type=str, help='BS configuration file to override srsLTE options. \
         Format as json, e.g., {\'n_prb\': 50, \'dl_freq\': 980000000, \'ul_freq\': 1020000000}.')
     parser.add_argument('--ue-config', type=str, help='UE configuration file to override srsLTE options. \
         Format as json (see bs-config).')
 
-    parser.add_argument('--force-dl-modulation', help='Force downlink modulation from base station to users', action='store_true')
-    parser.add_argument('--force-ul-modulation', help='Force uplink modulation from base station to users', action='store_true')
+    parser.add_argument('--force-dl-modulation',
+                        help='Force downlink modulation from base station to users', action='store_true')
+    parser.add_argument('--force-ul-modulation',
+                        help='Force uplink modulation from base station to users', action='store_true')
     parser.add_argument('--global-scheduling-policy', type=int, default=0, choices=[0, 1, 2], help='Global MAC-layer scheduling policy. Used at base station side,\
         overruled by slice-dependent scheduling if network slicing is enabled.')
-    parser.add_argument('--network-slicing', help='Enable network slicing. Used at base station side', action='store_true')
+    parser.add_argument(
+        '--network-slicing', help='Enable network slicing. Used at base station side', action='store_true')
     parser.add_argument('--slice-allocation', type=str, help='Slice allocation in the form of {slice_num: [lower_rbg, upper_rbg], ...} (inclusive),\
         e.g., {0: [0, 3], 1: [5, 7]} to assign RBGs 0-3 to slice 0 and 5-7 to slice 1')
     parser.add_argument('--slice-users', type=str, help='Slice UEs in the form of {slice_num: [ue1, ue2, ...], ...},\
         e.g., {0: [1, 5], 1: [2, 3, 4]} to associate UEs 1 and 5 to slice 0 and UEs 2, 3 and 4 to slice 1. The UE IDs correspond to the SRNs \
         of the reservation from the base station onwards. E.g., if SRNs 3, 5, 7, 8 are reserved and `users-bs` is set to 3, the base station is SRN 3, \
         while SRNs 5, 7 and 8 are the 1st, 2nd and 3rd users, respectively')
-    parser.add_argument('--slice-scheduling-policy', type=str, help='Slicing policy for each slice in the format [0, 0, 1, 2, ...]')
-    parser.add_argument('--tenant-number', type=int, default=2, choices=range(1, 11), help='Number of tenants for network slicing.')
+    parser.add_argument('--slice-scheduling-policy', type=str,
+                        help='Slicing policy for each slice in the format [0, 0, 1, 2, ...]')
+    parser.add_argument('--tenant-number', type=int, default=2,
+                        choices=range(1, 11), help='Number of tenants for network slicing.')
     args = parser.parse_args()
 
+    actual_dir = os.getcwd()
+
     # configure logger and console output
-    logging.basicConfig(level=logging.DEBUG, filename='/logs/run.log', filemode='a+',
-        format='%(asctime)-15s %(levelname)-8s %(message)s')
+    logging.basicConfig(level=logging.DEBUG, filename=actual_dir+'/logs/run.log', filemode='a+',
+                        format='%(asctime)-15s %(levelname)-8s %(message)s')
     formatter = logging.Formatter('%(asctime)-15s %(levelname)-8s %(message)s')
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
@@ -684,16 +715,18 @@ if __name__ == '__main__':
                   'ue-config': args.ue_config}
     else:
         # parse config file
-        filename = os.path.expanduser('~/radio_api/' + args.config_file)
+        filename = os.path.expanduser(actual_dir+'/' + args.config_file)
         config = parse_config_file(filename)
 
         if args.colcli:
-            logging.info('use-colosseumcli overridden by CLI argument. Setting it to True')
+            logging.info(
+                'use-colosseumcli overridden by CLI argument. Setting it to True')
             config['colosseumcli'] = args.colcli
 
         # check if key write-config-parameters was given
         if config.get('write-config-parameters') is None:
-            logging.info('write-config-parameters not specified. Setting it to False')
+            logging.info(
+                'write-config-parameters not specified. Setting it to False')
             config['write-config-parameters'] = False
 
         if config.get('dl-prb') is None:
@@ -704,7 +737,8 @@ if __name__ == '__main__':
             if config['dl-prb'] not in prb_values:
                 config['dl-prb'] = n_prb_default
             else:
-                logging.info('Setting BS to ' + str(config['dl-prb']) + ' PRBs.')
+                logging.info('Setting BS to ' +
+                             str(config['dl-prb']) + ' PRBs.')
 
         if config.get('dl-freq') is None:
             config['dl-freq'] = dl_freq_default
@@ -736,8 +770,8 @@ if __name__ == '__main__':
         config_params['ue_config']['ul_freq'] = config['ul-freq']
 
     run_scope(config['users-bs'], config['iperf'],
-        config['colosseumcli'], config['capture-pkts'],
-        config_params, config['write-config-parameters'])
+              config['colosseumcli'], config['capture-pkts'],
+              config_params, config['write-config-parameters'])
 
     # set LTE transceiver state to active
     time.sleep(2)
