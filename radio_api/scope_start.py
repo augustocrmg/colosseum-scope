@@ -682,7 +682,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     actual_dir = os.getcwd()
-
     # configure logger and console output
     logging.basicConfig(level=logging.DEBUG, filename=actual_dir+'/logs/run.log', filemode='a+',
                         format='%(asctime)-15s %(levelname)-8s %(message)s')
@@ -714,6 +713,7 @@ if __name__ == '__main__':
                   'bs-config': args.bs_config,
                   'ue-config': args.ue_config}
     else:
+        actual_dir
         # parse config file
         filename = os.path.expanduser(actual_dir+'/' + args.config_file)
         config = parse_config_file(filename)
